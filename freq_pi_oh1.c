@@ -106,6 +106,7 @@ static volatile uint32_t piPeriphBase = 0x40000000;
 static volatile uint32_t piBusAddr = 0x1f000d0000;
 static volatile uint32_t piGpioBase = 0x400d0000;
 
+
 // I/O access
 volatile unsigned int *gpio;
 volatile unsigned *allof7e;
@@ -182,7 +183,7 @@ unsigned gpioHardwareRevision(void)
             }
          }
 
-        static volatile uint32_t piGpioBase = (0x400d0000);
+
 
          if (!strncasecmp("revision", buf, 8))
          {
@@ -220,7 +221,6 @@ int verbose;
 void setup_io()
 {
 	const char *gpiomem_path = "/dev/gpiomem4";
-	int mem_fd;
 	void *gpio_map;
 
 /* open /dev/gpiomem4 */
@@ -237,21 +237,29 @@ gpio_map = mmap(
      PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
      MAP_SHARED,       //Shared with other processes
      mem_fd,           //File to map
-     piPeriphBase         //Offset to GPIO peripheral
+     0         //Offset to GPIO peripheral
    );
+
+
+
+printf("GPIO Base Virtual: %p, Physical: 0x%08\n", (void *)gpio, piGpioBase);
+printf("GPIO Map: Virtual Address: %p, Physical Base: 0x%08\n", (void *)gpio_map, piPeriphBase);
+printf("Peripheral Base Address: 0x%08x, Bus Addresss: 0x%08\n", piPeriphBase, piBusAddr);
+printf("SPI Memory: Virtual: %p, Physical: 0x%08\n", (void *)spi0_map, spi0_mem);
+
 
 /*close(mem_fd); // No need to keep mem_fd open after mmap*/
 
 if(gpio_map == MAP_FAILED)
 	{
-	perror("mmap error %d\n");//errno also set!
+	perror("mmap error");//errno also set!
 	close(mem_fd);
 	exit(EXIT_FAILURE);
 	}
 
 // Always use volatile pointer!
 gpio = (volatile unsigned *)gpio_map;
-close(mem_fd)
+close(mem_fd);
 } /* end function setup_io */
 
 
@@ -318,7 +326,7 @@ if( (mem_fd = open("/dev/gpiomem4", O_RDWR|O_SYNC) ) < 0)
 //Should work with either Pi given the right base address definition at the top of the file.
 allof7e = (unsigned *)mmap( NULL, 0x01000000,  /*len */ PROT_READ|PROT_WRITE, MAP_SHARED, mem_fd, piPeriphBase  /* base */ );
 
-if( (int)allof7e == -1) exit(1);
+if( (int)allof7e == MAP_FAILED) exit(1);
 
 SETBIT(GPFSEL0 , 14);
 CLRBIT(GPFSEL0 , 13);
@@ -341,6 +349,8 @@ Clock source
 struct GPCTL setupword = {source, 1, 0, 0, 0, 1,0x5a};
 
 ACCESS(CM_GP0CTL) = *((int*)&setupword);
+
+close(mem_fd);
 }
 
 
